@@ -1,0 +1,12 @@
+MONOLITH - An autonomous personal orchestration engine. Turning natural-language intent into structured plans, constraint-aware schedules, and adaptive execution timelines.Built around deterministic scheduling, AI-driven reasoning, and local-first intelligence. Wrapped in an extreme brutalism theme.
+• Jhutlink — Built an AI native b2b SaaS platform connecting textile waste generators directly with recyclers, manufacturers and entrepreneurs.
+• Luxury Travel Consultant Chatbot — Developed an AI-powered travel assistant that provides personalized luxury travel recommendations and planning support.
+• AI Research Crew — Created a multi-agent AI system for automated research, information gathering, and report generation using Crew-AI.
+• Persona LinkedIn Post Generator — Built an AI tool that generates LinkedIn posts tailored to different personas and writing styles.
+• GrandJury — Contributed to an open-source pluralistic human evaluation framework used for assessing AI systems in production environments.
+• Anime AI Assistant: Miyu-san — Built a conversational AI assistant with an anime-inspired personality and interactive features with Japanese accent using Edge TTS.
+• Expression2Meme (OpenCV + AI) — Created a computer vision application that converts facial expressions into relevant meme suggestions.
+• AI Interview Tool — Developed an AI-powered mock interview platform with automated question generation and feedback.
+• Productivity App with Salah Tracker — Built a productivity management application integrating task tracking with daily prayer monitoring.
+• Opportunity EDA Report — Performed exploratory data analysis to uncover patterns, trends, and insights from opportunity-related datasets.
+• Layoff Data Cleaning Project — Cleaned and transformed real-world layoff datasets using SQL to improve data quality and analysis readiness.
