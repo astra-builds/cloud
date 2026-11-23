@@ -31,7 +31,8 @@ export default function App() {
     let fail = 0;
 
     (async () => {
-      await Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 1600))]);
+      // Start the visible build promptly even if a web font is slow to resolve.
+      await Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 900))]);
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       if (cancelled) return;
       eng = new Engine({

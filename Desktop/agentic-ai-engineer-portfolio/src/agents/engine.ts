@@ -131,6 +131,9 @@ class SelBox {
 }
 
 export class Engine {
+  // Keeps the full cursor choreography visible while trimming idle time between moves.
+  // The animation remains deliberate; it simply reaches the finished canvas sooner.
+  readonly tempo = 0.78;
   layer: HTMLDivElement;
   cursors: Record<string, Cursor> = {};
   skipped = false;
@@ -173,7 +176,7 @@ export class Engine {
       const id = setTimeout(() => {
         this.waiters.delete(w);
         res();
-      }, ms);
+      }, ms * this.tempo);
       this.waiters.add(w);
     });
   }
@@ -185,6 +188,7 @@ export class Engine {
         return res(true);
       }
       const start = performance.now();
+      const duration = ms * this.tempo;
       const step = (now: number) => {
         if (this.dead) return res(false);
         if (this.skipped) {
@@ -192,7 +196,7 @@ export class Engine {
           return res(true);
         }
         if (alive && !alive()) return res(false);
-        const p = clamp((now - start) / ms, 0, 1);
+        const p = clamp((now - start) / duration, 0, 1);
         fn(easing(p));
         if (p < 1) requestAnimationFrame(step);
         else res(true);

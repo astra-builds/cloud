@@ -1,4 +1,5 @@
 import type { Project } from "../data";
+import { useInView } from "../hooks";
 
 function rng(seed: number) {
   return () => {
@@ -11,6 +12,7 @@ function rng(seed: number) {
 }
 
 export function ProjectArt({ p, className = "" }: { p: Project; className?: string }) {
+  const [ref, visible] = useInView<SVGSVGElement>(0.01);
   const { bg, fg, art } = p;
   const r = rng(p.name.length * 977 + 13);
   let body: React.ReactNode = null;
@@ -75,7 +77,7 @@ export function ProjectArt({ p, className = "" }: { p: Project; className?: stri
   }
 
   return (
-    <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" className={className} style={{ background: bg, display: "block", width: "100%", height: "100%" }}>
+    <svg ref={ref} viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" className={`${className} ${visible ? "art-live" : "art-static"}`} style={{ background: bg, display: "block", width: "100%", height: "100%" }}>
       {body}
     </svg>
   );

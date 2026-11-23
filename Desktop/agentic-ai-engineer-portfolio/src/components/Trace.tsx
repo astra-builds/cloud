@@ -60,11 +60,21 @@ export function useRunner() {
 export function HeroTrace({ scenarios }: { scenarios: Scenario[] }) {
   const { lines, run, stats } = useRunner();
   const idx = useRef(0);
+  const host = useRef<HTMLDivElement>(null);
+  const active = useRef(true);
 
   useEffect(() => {
     let alive = true;
+    const observer = new IntersectionObserver(([entry]) => {
+      active.current = entry.isIntersecting;
+    }, { threshold: 0.05 });
+    if (host.current) observer.observe(host.current);
     (async () => {
       while (alive) {
+        if (!active.current) {
+          await new Promise((r) => setTimeout(r, 900));
+          continue;
+        }
         const sc = scenarios[idx.current % scenarios.length];
         await run(sc, idx.current % 2 === 0);
         await new Promise((r) => setTimeout(r, 2600));
@@ -73,12 +83,13 @@ export function HeroTrace({ scenarios }: { scenarios: Scenario[] }) {
     })();
     return () => {
       alive = false;
+      observer.disconnect();
     };
   }, [run, scenarios]);
 
   const sc = scenarios[idx.current % scenarios.length];
   return (
-    <>
+    <div ref={host} className="hero-trace-live">
       <div className="trace-head">
         <span>
           <i className="dot-live" /> agent.trace
@@ -91,6 +102,6 @@ export function HeroTrace({ scenarios }: { scenarios: Scenario[] }) {
         <span style={{ opacity: 0.5 }}>goal</span> “{sc.goal}”
       </div>
       <TraceLines lines={lines} max={5} />
-    </>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-export function useInView<T extends HTMLElement>(threshold = 0.15) {
+export function useInView<T extends Element>(threshold = 0.15) {
   const ref = useRef<T>(null);
   const [seen, setSeen] = useState(false);
   useEffect(() => {

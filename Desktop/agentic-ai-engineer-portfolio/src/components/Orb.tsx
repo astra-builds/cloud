@@ -9,11 +9,13 @@ export function Orb() {
     const c = ref.current!;
     const ctx = c.getContext("2d")!;
     let raf = 0;
+    let visible = true;
     let mx = 0,
       my = 0,
       smx = 0,
       smy = 0;
-    const N = 120;
+    // The point cloud keeps its character at roughly half the pair checks.
+    const N = window.matchMedia("(max-width: 700px)").matches ? 56 : 84;
     const pts = Array.from({ length: N }, (_, i) => {
       const y = 1 - (i / (N - 1)) * 2;
       const r = Math.sqrt(1 - y * y);
@@ -29,6 +31,10 @@ export function Orb() {
     window.addEventListener("pointermove", onMove);
 
     const draw = (time: number) => {
+      if (!visible || document.hidden) {
+        raf = 0;
+        return;
+      }
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = c.clientWidth,
         h = c.clientHeight;
@@ -114,9 +120,20 @@ export function Orb() {
       });
       raf = requestAnimationFrame(draw);
     };
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      if (visible && !raf) raf = requestAnimationFrame(draw);
+    }, { threshold: 0.01 });
+    observer.observe(c);
+    const onVisibility = () => {
+      if (!document.hidden && visible && !raf) raf = requestAnimationFrame(draw);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     raf = requestAnimationFrame(draw);
     return () => {
       cancelAnimationFrame(raf);
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pointermove", onMove);
     };
   }, []);

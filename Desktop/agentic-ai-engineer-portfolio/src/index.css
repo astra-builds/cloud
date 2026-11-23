@@ -193,6 +193,7 @@ html.intro [data-build]:not(.built):not(.carrying) { visibility: hidden; }
 .stats span { font: 400 10.5px/1.2 var(--monof); text-transform: uppercase; opacity: 0.6; letter-spacing: 0.04em; display: block; margin-top: 4px; }
 
 .trace { background: var(--ink); color: var(--paper); border-radius: 18px; padding: 13px 18px 12px; font: 400 12.5px/1.6 var(--monof); height: clamp(176px, 20vh, 216px); overflow: hidden; display: flex; flex-direction: column; box-shadow: 8px 8px 0 -1px rgba(15, 15, 13, 0.12); }
+.hero-trace-live { display: flex; flex: 1; min-height: 0; flex-direction: column; }
 .trace-head { display: flex; justify-content: space-between; gap: 10px; color: rgba(237, 232, 221, 0.55); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; padding-bottom: 7px; border-bottom: 1px dashed rgba(237, 232, 221, 0.22); margin-bottom: 7px; }
 .trace-head > span { display: inline-flex; gap: 8px; align-items: center; }
 .trace-goal { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; flex: none; }
@@ -220,6 +221,7 @@ html.intro [data-build]:not(.built):not(.carrying) { visibility: hidden; }
 .marquee { margin: 24px -4vw 0; transform: rotate(-1.1deg); background: var(--ink); color: var(--paper); overflow: hidden; white-space: nowrap; padding: 11px 0; position: relative; z-index: 2; }
 .marquee-track { display: inline-flex; animation: mq 46s linear infinite; }
 .marquee:hover .marquee-track { animation-play-state: paused; }
+.art-static .spin-slow, .art-static .wave, .art-static .blink, .art-static .fan { animation-play-state: paused; }
 .marquee-track span { padding-right: 28px; font-size: 22px; font-weight: 700; text-transform: uppercase; letter-spacing: -0.01em; font-variation-settings: "wdth" 75; }
 .marquee-track i { color: var(--orange); font-style: normal; margin-left: 28px; }
 @keyframes mq { to { transform: translateX(-50%); } }
@@ -416,6 +418,7 @@ html.intro [data-build]:not(.built):not(.carrying) { visibility: hidden; }
   .grave > .rv .stone { min-height: 0 !important; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .marquee-track, .spin-slow, .wave, .blink, .fan { animation: none; }
+  .marquee-track, .spin-slow, .wave, .blink, .fan, .agent-layer, .orb-canvas, .dot-live, .click-ring,
+  .built[data-fx], .built .ch, .tl, .rv, .mask > span { animation: none !important; transition-duration: 0.01ms !important; }
   html { scroll-behavior: auto; }
 }
