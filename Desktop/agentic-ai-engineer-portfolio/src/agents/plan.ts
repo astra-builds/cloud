@@ -5,7 +5,6 @@ export const PLAN: Plan = {
   planner: {
     delay: 0,
     tasks: [
-      { kind: "guides", v: ["t-kamrul", "trace"], h: ["t-kamrul", "card-0"], log: "snapped 4 layout guides" },
       { kind: "build", id: "meta-label", mode: "drag", fx: "wipe", log: "labelled the canvas" },
       { kind: "build", id: "meta-pill", mode: "click", fx: "pop", log: "located the engineer" },
       { kind: "build", id: "stats", mode: "drag", fx: "rise", log: "pinned the toolkit" },

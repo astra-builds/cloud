@@ -1,6 +1,5 @@
 // A tiny multi-cursor choreography engine.
-// Cursors are real DOM overlays that drag selection boxes over real DOM elements,
-// which are then "built" (revealed) the moment the cursor lets go.
+// Cursors are real DOM overlays that build the page in a shared workspace.
 
 export type AgentDef = { id: string; name: string; color: string; ink?: string };
 
@@ -14,16 +13,14 @@ export const AGENTS: AgentDef[] = [
   { id: "ticker", name: "tick-tock", color: "#FFA400", ink: "#0E0E0C" },
 ];
 
-export type Task =
-  | { kind: "guides"; v?: string[]; h?: string[]; log: string }
-  | {
-      kind: "build";
-      id: string;
-      mode?: "drag" | "click" | "type" | "carry";
-      fx?: string;
-      log: string;
-      hold?: number;
-    };
+export type Task = {
+  kind: "build";
+  id: string;
+  mode?: "drag" | "click" | "type" | "carry";
+  fx?: string;
+  log: string;
+  hold?: number;
+};
 
 export type Plan = Record<string, { delay: number; tasks: Task[] }>;
 
@@ -96,40 +93,6 @@ class Cursor {
   }
 }
 
-class SelBox {
-  el: HTMLDivElement;
-  chip: HTMLSpanElement;
-  constructor(layer: HTMLElement, color: string, ink: string, label: string) {
-    this.el = document.createElement("div");
-    this.el.className = "selbox";
-    this.el.style.setProperty("--c", color);
-    this.el.style.setProperty("--ink", ink);
-    this.el.innerHTML = `<i class="h tl"></i><i class="h tr"></i><i class="h bl"></i><i class="h br"></i>`;
-    this.chip = document.createElement("span");
-    this.chip.className = "selchip";
-    this.chip.textContent = label;
-    this.el.appendChild(this.chip);
-    layer.appendChild(this.el);
-  }
-  update(x0: number, y0: number, x1: number, y1: number, label?: string) {
-    const l = Math.min(x0, x1),
-      t = Math.min(y0, y1),
-      w = Math.abs(x1 - x0),
-      h = Math.abs(y1 - y0);
-    this.el.style.transform = `translate3d(${l}px,${t}px,0)`;
-    this.el.style.width = w + "px";
-    this.el.style.height = h + "px";
-    if (label) this.chip.textContent = label;
-  }
-  fade(ms = 500) {
-    this.el.classList.add("done");
-    setTimeout(() => this.el.remove(), ms);
-  }
-  remove() {
-    this.el.remove();
-  }
-}
-
 export class Engine {
   // Keeps the full cursor choreography visible while trimming idle time between moves.
   // The animation remains deliberate; it simply reaches the finished canvas sooner.
@@ -145,7 +108,6 @@ export class Engine {
   total = 0;
   done = 0;
   t0 = 0;
-  guides: HTMLElement[] = [];
 
   constructor(private hooks: Hooks) {
     this.layer = document.createElement("div");
@@ -216,7 +178,6 @@ export class Engine {
   private markBuilt(el: HTMLElement, fx: string | undefined, agent: AgentDef) {
     el.style.setProperty("--agent", agent.color);
     if (fx) el.dataset.fx = fx;
-    el.classList.remove("carrying", "lifted");
     el.classList.add("built");
   }
 
@@ -247,41 +208,17 @@ export class Engine {
       y0 = clamp(r.top, 4, vh - 4),
       x1 = clamp(r.right, 4, vw - 4),
       y1 = clamp(r.bottom, 4, vh - 4);
-    const dims = `${Math.round(r.width)}×${Math.round(r.height)}`;
-
     if (mode === "carry") {
-      // cursor grabs the element from off-canvas and drops it into place
+      // The cursor travels the same route without transforming page content.
       const side = Math.random() < 0.5 ? -1 : 1;
       const sx = clamp(x0 + (x1 - x0) / 2 + side * rand(300, 700), -40, vw + 40);
       const sy = vh + rand(40, 120);
       await cur.moveTo(sx, sy, 230, ease.out);
       const cx = (x0 + x1) / 2,
         cy = (y0 + y1) / 2;
-      const rot = side * rand(4, 9);
-      el.classList.add("carrying", "lifted");
-      el.style.transition = "none";
-      el.style.setProperty("--agent", cur.def.color);
-      const apply = (px: number, py: number, k: number) => {
-        el.style.transform = `translate3d(${px - cx}px,${py - cy}px,0) rotate(${rot * k}deg) scale(${1 + 0.05 * k})`;
-      };
-      apply(sx, sy, 1);
-      const ep = cur.epoch;
       const dur = clamp(Math.hypot(cx - sx, cy - sy) * 0.55, 520, 900);
-      const sxx = sx,
-        syy = sy;
-      await this.tween(dur, ease.outExpo, (k) => {
-        const px = sxx + (cx - sxx) * k,
-          py = syy + (cy - syy) * k;
-        cur.set(px, py);
-        apply(px, py, 1 - k * 0.8);
-      }, () => cur.epoch === ep);
-      el.style.transition = "transform .45s cubic-bezier(.3,1.6,.5,1), box-shadow .45s";
-      el.style.transform = "";
-      el.classList.remove("lifted");
-      await this.sleep(120);
+      await cur.moveTo(cx, cy, dur, ease.outExpo);
       this.markBuilt(el, "none", cur.def);
-      setTimeout(() => (el.style.transition = ""), 520);
-      this.ring(cur, cx, cy);
       this.tick(cur.def, t.log);
       await this.sleep(t.hold ?? 80);
       return;
@@ -291,7 +228,6 @@ export class Engine {
       await cur.moveTo((x0 + x1) / 2 + rand(-4, 4), (y0 + y1) / 2 + rand(-3, 3), undefined, ease.inOut);
       cur.el.classList.add("down");
       await this.sleep(70);
-      this.ring(cur, cur.x, cur.y);
       this.markBuilt(el, fx ?? "pop", cur.def);
       cur.el.classList.remove("down");
       this.tick(cur.def, t.log);
@@ -301,8 +237,6 @@ export class Engine {
 
     // drag / type
     await cur.moveTo(x0, y0);
-    const box = new SelBox(this.layer, cur.def.color, cur.def.ink ?? "#fff", dims);
-    box.update(x0, y0, x0, y0);
     cur.el.classList.add("down");
     await this.sleep(60);
     const dur = mode === "type" ? 380 : clamp(Math.hypot(x1 - x0, y1 - y0) * 0.55, 260, 520);
@@ -311,11 +245,8 @@ export class Engine {
       const px = x0 + (x1 - x0) * k,
         py = y0 + (y1 - y0) * k;
       cur.set(px, py);
-      box.update(x0, y0, px, py, `${Math.round(Math.abs(px - x0))}×${Math.round(Math.abs(py - y0))}`);
     }, () => cur.epoch === ep);
     cur.el.classList.remove("down");
-    box.update(x0, y0, x1, y1, dims);
-    this.ring(cur, cur.x, cur.y);
     this.markBuilt(el, fx, cur.def);
     this.tick(cur.def, t.log);
     if (mode === "type") {
@@ -324,67 +255,10 @@ export class Engine {
       const dd = clamp((x1 - x0) * 0.9, 380, 900);
       el.style.setProperty("--ld", `${Math.round(dd / Math.max(1, (el.dataset.chars ? +el.dataset.chars : 8)))}ms`);
       cur.set(x0, ty);
-      box.fade(700);
       await this.tween(dd, ease.out, (k) => cur.set(x0 + (x1 - x0) * k, ty + Math.sin(k * 7) * 6), () => cur.epoch === ep);
     } else {
-      box.fade(550);
       await this.sleep(t.hold ?? 60);
     }
-  }
-
-  private ring(cur: Cursor, x: number, y: number) {
-    const r = document.createElement("div");
-    r.className = "click-ring";
-    r.style.setProperty("--c", cur.def.color);
-    r.style.left = x + "px";
-    r.style.top = y + "px";
-    this.layer.appendChild(r);
-    setTimeout(() => r.remove(), 700);
-  }
-
-  private async doGuides(cur: Cursor, t: Extract<Task, { kind: "guides" }>) {
-    const { w: vw, h: vh } = this.vp();
-    const mk = (vertical: boolean) => {
-      const g = document.createElement("div");
-      g.className = "guide " + (vertical ? "v" : "h");
-      g.style.setProperty("--c", cur.def.color);
-      this.layer.appendChild(g);
-      this.guides.push(g);
-      return g;
-    };
-    const items: { vertical: boolean; pos: number }[] = [];
-    (t.v ?? []).forEach((id) => {
-      const el = this.find(id);
-      if (el) items.push({ vertical: true, pos: el.getBoundingClientRect().left });
-    });
-    (t.h ?? []).forEach((id) => {
-      const el = this.find(id);
-      if (el) items.push({ vertical: false, pos: el.getBoundingClientRect().top });
-    });
-    for (const it of items) {
-      if (it.pos < 0 || it.pos > (it.vertical ? vw : vh)) continue;
-      const g = mk(it.vertical);
-      const ep = cur.epoch;
-      if (it.vertical) {
-        await cur.moveTo(0, vh * rand(0.3, 0.7), 260);
-        cur.el.classList.add("down");
-        await this.tween(360, ease.out, (k) => {
-          const x = it.pos * k;
-          cur.set(x, cur.y);
-          g.style.transform = `translate3d(${x}px,0,0)`;
-        }, () => cur.epoch === ep);
-      } else {
-        await cur.moveTo(vw * rand(0.3, 0.7), 0, 260);
-        cur.el.classList.add("down");
-        await this.tween(360, ease.out, (k) => {
-          const y = it.pos * k;
-          cur.set(cur.x, y);
-          g.style.transform = `translate3d(0,${y}px,0)`;
-        }, () => cur.epoch === ep);
-      }
-      cur.el.classList.remove("down");
-    }
-    this.tick(cur.def, t.log);
   }
 
   // ---------------------------------------------------------------- run
@@ -406,8 +280,7 @@ export class Engine {
       await this.sleep(p.delay);
       for (const t of p.tasks) {
         if (this.dead) return;
-        if (t.kind === "guides") await this.doGuides(cur, t);
-        else await this.doBuild(cur, t);
+        await this.doBuild(cur, t);
       }
     });
     await Promise.all(jobs);
@@ -415,8 +288,6 @@ export class Engine {
     this.skipped = false;
     // everything leftover (safety)
     document.querySelectorAll<HTMLElement>("[data-build]:not(.built)").forEach((el) => el.classList.add("built"));
-    this.guides.forEach((g) => g.classList.add("gone"));
-    setTimeout(() => this.guides.forEach((g) => g.remove()), 700);
     this.hooks.onDone(performance.now() - this.t0);
     this.ambient();
   }
@@ -436,8 +307,16 @@ export class Engine {
     const vh = window.innerHeight;
     return Array.from(document.querySelectorAll<HTMLElement>("[data-inspect]")).filter((e) => {
       const r = e.getBoundingClientRect();
-      return r.bottom > 60 && r.top < vh - 60 && r.width > 30 && r.height > 14 && !this.claimed.has(e);
+      const textLike = /^(A|BUTTON|H1|H2|H3|H4|H5|H6|LI|P|SPAN)$/.test(e.tagName) || e.classList.contains("sec-label");
+      return textLike && r.bottom > 60 && r.top < vh - 60 && r.width > 30 && r.height > 14 && !this.claimed.has(e);
     });
+  }
+
+  private focusText(el: HTMLElement, agent: AgentDef) {
+    if (!el.matches("a,button,h1,h2,h3,h4,h5,h6,li,p,span,.sec-label")) return () => {};
+    el.style.setProperty("--agent", agent.color);
+    el.classList.add("agent-focus");
+    return () => el.classList.remove("agent-focus");
   }
 
   private async ambient() {
@@ -448,7 +327,6 @@ export class Engine {
 
   private async life(cur: Cursor, idx: number) {
     await new Promise((r) => setTimeout(r, 400 + idx * 650));
-    const verbs = ["reviewing", "linting", "tweaking", "measuring", "testing", "vibing", "tracing", "polishing"];
     while (!this.dead) {
       if (!this.ambientOn) {
         await new Promise((r) => setTimeout(r, 400));
@@ -473,25 +351,13 @@ export class Engine {
         const el = targets[Math.floor(Math.random() * targets.length)];
         this.claimed.add(el);
         const r = el.getBoundingClientRect();
-        const x0 = clamp(r.left, 6, vw - 6),
-          y0 = clamp(r.top, 6, vh - 6),
-          x1 = clamp(r.right, 6, vw - 6),
-          y1 = clamp(r.bottom, 6, vh - 6);
+        const x0 = clamp((r.left + r.right) / 2, 6, vw - 6),
+          y0 = clamp((r.top + r.bottom) / 2, 6, vh - 6);
         await cur.moveTo(x0, y0);
         if (!this.gatherEl) {
-          const box = new SelBox(this.layer, cur.def.color, cur.def.ink ?? "#fff", `${cur.def.name} · ${verbs[Math.floor(Math.random() * verbs.length)]}`);
-          box.update(x0, y0, x0, y0);
-          cur.el.classList.add("down");
-          const ep = cur.epoch;
-          const ok = await this.tween(rand(420, 700), ease.out, (k) => {
-            const px = x0 + (x1 - x0) * k,
-              py = y0 + (y1 - y0) * k;
-            cur.set(px, py);
-            box.update(x0, y0, px, py);
-          }, () => cur.epoch === ep);
-          cur.el.classList.remove("down");
-          if (ok) await new Promise((r) => setTimeout(r, rand(900, 2000)));
-          box.fade(400);
+          const clearFocus = this.focusText(el, cur.def);
+          await new Promise((r) => setTimeout(r, rand(500, 1100)));
+          clearFocus();
         }
         this.claimed.delete(el);
       } else {
