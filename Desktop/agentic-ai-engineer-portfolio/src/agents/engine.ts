@@ -104,7 +104,6 @@ export class Engine {
   ambientOn = true;
   waiters = new Set<() => void>();
   gatherEl: HTMLElement | null = null;
-  claimed = new Set<Element>();
   total = 0;
   done = 0;
   t0 = 0;
@@ -300,23 +299,7 @@ export class Engine {
 
   gather(el: HTMLElement | null) {
     this.gatherEl = el;
-    if (el) Object.values(this.cursors).forEach((c) => c.interrupt());
-  }
-
-  private visibleTargets() {
-    const vh = window.innerHeight;
-    return Array.from(document.querySelectorAll<HTMLElement>("[data-inspect]")).filter((e) => {
-      const r = e.getBoundingClientRect();
-      const textLike = /^(A|BUTTON|H1|H2|H3|H4|H5|H6|LI|P|SPAN)$/.test(e.tagName) || e.classList.contains("sec-label");
-      return textLike && r.bottom > 60 && r.top < vh - 60 && r.width > 30 && r.height > 14 && !this.claimed.has(e);
-    });
-  }
-
-  private focusText(el: HTMLElement, agent: AgentDef) {
-    if (!el.matches("a,button,h1,h2,h3,h4,h5,h6,li,p,span,.sec-label")) return () => {};
-    el.style.setProperty("--agent", agent.color);
-    el.classList.add("agent-focus");
-    return () => el.classList.remove("agent-focus");
+    Object.values(this.cursors).forEach((c) => c.interrupt());
   }
 
   private async ambient() {
@@ -327,6 +310,7 @@ export class Engine {
 
   private async life(cur: Cursor, idx: number) {
     await new Promise((r) => setTimeout(r, 400 + idx * 650));
+    let angle = (idx / AGENTS.length) * Math.PI * 2 - Math.PI / 2;
     while (!this.dead) {
       if (!this.ambientOn) {
         await new Promise((r) => setTimeout(r, 400));
@@ -344,26 +328,22 @@ export class Engine {
         }
         continue;
       }
-      const targets = this.visibleTargets();
-      const vw = window.innerWidth,
-        vh = window.innerHeight;
-      if (targets.length && Math.random() < 0.8) {
-        const el = targets[Math.floor(Math.random() * targets.length)];
-        this.claimed.add(el);
-        const r = el.getBoundingClientRect();
-        const x0 = clamp((r.left + r.right) / 2, 6, vw - 6),
-          y0 = clamp((r.top + r.bottom) / 2, 6, vh - 6);
-        await cur.moveTo(x0, y0);
-        if (!this.gatherEl) {
-          const clearFocus = this.focusText(el, cur.def);
-          await new Promise((r) => setTimeout(r, rand(500, 1100)));
-          clearFocus();
-        }
-        this.claimed.delete(el);
-      } else {
-        await cur.moveTo(rand(40, vw - 40), rand(80, vh - 40), rand(900, 1600));
+      const orb = document.querySelector<HTMLElement>('[data-build="orb"]');
+      if (!orb) {
+        await new Promise((r) => setTimeout(r, 500));
+        continue;
       }
-      await new Promise((r) => setTimeout(r, rand(300, 2600)));
+      const r = orb.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const gap = Math.max(22, Math.min(42, r.height * 0.28));
+      const radiusX = Math.min(r.width * 0.42 + gap, vw * 0.42);
+      const radiusY = Math.min(r.height * 0.6 + gap, vh * 0.18);
+      const x = clamp(r.left + r.width / 2 + Math.cos(angle) * radiusX, 18, vw - 18);
+      const y = clamp(r.top + r.height / 2 + Math.sin(angle) * radiusY, 72, vh - 52);
+      await cur.moveTo(x, y, 920 + idx * 70, ease.outExpo);
+      angle += 0.34 + idx * 0.025;
+      await new Promise((r) => setTimeout(r, 100));
     }
   }
 }

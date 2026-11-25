@@ -71,7 +71,6 @@ main, .contact { position: relative; z-index: 1; }
   box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.4);
 }
 html.intro [data-build]:not(.built) { visibility: hidden; }
-.agent-focus { color: var(--agent) !important; transition: color 0.24s ease; }
 
 .built[data-fx="wipe"] { animation: fx-wipe 0.75s cubic-bezier(0.7, 0, 0.2, 1) backwards; }
 .built[data-fx="wipeY"] { animation: fx-wipeY 0.75s cubic-bezier(0.7, 0, 0.2, 1) backwards; }
